@@ -1,51 +1,104 @@
-import streamlit as st
-import pandas as pd
+import json
 import os
 
-# file to store books in csv
-data_file = "books.csv"
+library = []
+file_path = "library.txt"
 
+# Load existing books if file exists
+if os.path.exists(file_path):
+    with open(file_path, "r") as file:
+        library = json.load(file)
 
-# display existing data
-if os.path.exists(data_file):
-    df = pd.read_csv(data_file)
-else:
-    df = pd.DataFrame(columns=["Title", "Author", "Genre", "Year"])
+def save_library():
+    with open(file_path, "w") as file:
+        json.dump(library, file, indent=4)
 
+def add_book():
+    title = input("Enter the book title: ")
+    author = input("Enter the author: ")
+    year = int(input("Enter the publication year: "))
+    genre = input("Enter the genre: ")
+    read_input = input("Have you read this book? (yes/no): ").strip().lower()
+    read = True if read_input == "yes" else False
 
-st.title("📚 Personal Library Manager")
+    book = {
+        "Title": title,
+        "Author": author,
+        "Year": year,
+        "Genre": genre,
+        "Read": read
+    }
+    library.append(book)
+    print("Book added successfully!\n")
 
+def remove_book():
+    title = input("Enter the title of the book to remove: ")
+    for book in library:
+        if book["Title"].lower() == title.lower():
+            library.remove(book)
+            print("Book removed successfully!\n")
+            return
+    print("Book not found!\n")
 
-# Sidebar for Add a new book
-st.sidebar.header("Add a New Book")
-title = st.sidebar.text_input("Book Title")
-author = st.sidebar.text_input("Author")
-genre = st.sidebar.text_input("Genre")
-year = st.sidebar.number_input("Year", min_value=0, max_value=2100, step=1)
+def search_book():
+    choice = input("Search by:\n1. Title\n2. Author\nEnter your choice: ")
+    keyword = input("Enter the keyword: ").lower()
+    found = False
+    for book in library:
+        if (choice == "1" and keyword in book["Title"].lower()) or \
+           (choice == "2" and keyword in book["Author"].lower()):
+            print(f"{book['Title']} by {book['Author']} ({book['Year']}) - {book['Genre']} - {'Read' if book['Read'] else 'Unread'}")
+            found = True
+    if not found:
+        print("No matching books found.\n")
 
-if st.sidebar.button("Add Book"):
-    if title and author:
-        new_book = pd.DataFrame({"Title": [title], "Author": [author], "Genre": [genre], "Year": [year]})
-        df = pd.concat([df, new_book], ignore_index=True)
-        df.to_csv(data_file, index=False)
-        st.sidebar.success("Book added successfully!")
-    else:
-        st.sidebar.error("Please enter at least Title and Author")
+def display_books():
+    if not library:
+        print("No books in your library.\n")
+        return
+    for idx, book in enumerate(library, start=1):
+        status = "Read" if book["Read"] else "Unread"
+        print(f"{idx}. {book['Title']} by {book['Author']} ({book['Year']}) - {book['Genre']} - {status}")
+    print()
 
+def display_stats():
+    total = len(library)
+    if total == 0:
+        print("Library is empty.\n")
+        return
+    read_count = sum(1 for book in library if book["Read"])
+    percent = (read_count / total) * 100
+    print(f"Total books: {total}")
+    print(f"Books read: {read_count}")
+    print(f"Percentage read: {percent:.2f}%\n")
 
-# for display books
-st.subheader("📖 Fatima Library")
-if df.empty:
-    st.info("No books added yet. Add some from the sidebar!")
-else:
-    st.dataframe(df)
+def main():
+    while True:
+        print("\nWelcome to your Personal Library Manager!")
+        print("1. Add a book")
+        print("2. Remove a book")
+        print("3. Search for a book")
+        print("4. Display all books")
+        print("5. Display statistics")
+        print("6. Exit")
+        choice = input("Enter your choice: ")
 
+        if choice == "1":
+            add_book()
+        elif choice == "2":
+            remove_book()
+        elif choice == "3":
+            search_book()
+        elif choice == "4":
+            display_books()
+        elif choice == "5":
+            display_stats()
+        elif choice == "6":
+            save_library()
+            print("Library saved to file. Goodbye!")
+            break
+        else:
+            print("Invalid choice. Try again.\n")
 
-    # for delete book
-    st.subheader("🗑️ Remove a Book")
-    book_to_delete = st.selectbox("Select a book to delete", df["Title"].tolist())
-    if st.button("Delete Book"):
-        df = df[df.Title != book_to_delete]
-        df.to_csv(data_file, index=False)
-        st.success(f'Book "{book_to_delete}" deleted successfully!')
-        st.rerun()
+if __name__ == "__main__":
+    main()
